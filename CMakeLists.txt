@@ -53,6 +53,9 @@ set(CMAKE_CXX_FLAGS "-fopenmp")
 # Указание подключаемых библиотек
 target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
 
+find_package (Eigen3 3.4 REQUIRED NO_MODULE)
+target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
+
 # Подключение самих тестов
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     add_subdirectory(tests)

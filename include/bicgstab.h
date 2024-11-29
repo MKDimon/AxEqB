@@ -9,7 +9,7 @@ class BiCGSTAB
 {
 public:
     explicit BiCGSTAB(const bool usingParallel = false);
-    bool run(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
+    double run(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
              const std::vector<double>& values, const std::vector<double>& b,
              std::vector<double>& x, int max_iter, double tol);
 

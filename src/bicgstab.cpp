@@ -1,5 +1,6 @@
 #include "bicgstab.h"
 
+#include <iostream>
 #include <cmath>
 #include <omp.h>
 
@@ -39,7 +40,7 @@ double parallelDotProduct(const std::vector<double>& v1, const std::vector<doubl
 }
 
 // BiCGSTAB с параллельной итерацией
-bool bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
+double bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
                        const std::vector<double>& values, const std::vector<double>& b,
                        std::vector<double>& x, int max_iter, double tol) {
     int n = b.size();
@@ -57,10 +58,14 @@ bool bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>& 
 
     double b_norm = sqrt(parallelDotProduct(b, b));
     if (b_norm == 0.0) b_norm = 1.0;
+    double last_err = -1;
 
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = parallelDotProduct(r_hat, r);
-        if (fabs(rho_new) < 1e-15) return false; // Защита от деления на 0
+        if (fabs(rho_new) < 1e-15) { // Защита от деления на 0
+            std::cout << "Iter: " << iter << std::endl;
+            return last_err;
+        }
 
         if (iter == 0) {
 #pragma omp parallel for
@@ -85,13 +90,6 @@ bool bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>& 
         }
 
         double s_norm = sqrt(parallelDotProduct(s, s));
-        if (s_norm / b_norm < tol) {
-#pragma omp parallel for
-            for (int i = 0; i < n; ++i) {
-                x[i] += alpha * p[i];
-            }
-            return true;
-        }
 
         // Вычисление t = A * s
         sparseMatrixVectorParallelMultiplyCSR(row_ptr, col_indices, values, s, t);
@@ -106,11 +104,14 @@ bool bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>& 
         rho_old = rho_new;
 
         double r_norm = sqrt(parallelDotProduct(r, r));
-        if (r_norm / b_norm < tol) {
-            return true;
+        if (r_norm < tol * b_norm) {
+            std::cout << "Iter: " << iter << std::endl;
+            return r_norm / b_norm;
         }
+        last_err = r_norm / b_norm;
     }
-    return false;
+    std::cout << "Iter max." << std::endl;
+    return last_err;
 }
 
 // Умножение матрицы CSR на вектор
@@ -141,7 +142,7 @@ double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2) 
 }
 
 // BiCGSTAB с параллельной итерацией
-bool bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
+double bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
               const std::vector<double>& values, const std::vector<double>& b,
               std::vector<double>& x, int max_iter, double tol) {
     int n = b.size();
@@ -158,10 +159,14 @@ bool bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indic
 
     double b_norm = sqrt(dotProduct(b, b));
     if (b_norm == 0.0) b_norm = 1.0;
+    double last_err = -1;
 
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = dotProduct(r_hat, r);
-        if (fabs(rho_new) < 1e-15) return false; // Защита от деления на 0
+        if (fabs(rho_new) < 1e-15) { // Защита от деления на 0
+            std::cout << "Iter: " << iter << std::endl;
+            return last_err;
+        }
 
         if (iter == 0) {
             for (int i = 0; i < n; ++i) {
@@ -187,7 +192,8 @@ bool bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indic
             for (int i = 0; i < n; ++i) {
                 x[i] += alpha * p[i];
             }
-            return true;
+            std::cout << "Iter: " << iter << std::endl;
+            return s_norm / b_norm;
         }
 
         // Вычисление t = A * s
@@ -203,13 +209,16 @@ bool bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indic
 
         double r_norm = sqrt(dotProduct(r, r));
         if (r_norm / b_norm < tol) {
-            return true;
+            std::cout << "Iter: " << iter << std::endl;
+            return r_norm / b_norm;
         }
+        last_err = r_norm / b_norm;
     }
-    return false;
+    std::cout << "Iter max." << std::endl;
+    return last_err;
 }
 
-bool BiCGSTAB::run(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
+double BiCGSTAB::run(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
                    const std::vector<double>& values, const std::vector<double>& b,
                    std::vector<double>& x, int max_iter, double tol) {
     return usingParallel ?
