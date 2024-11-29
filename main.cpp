@@ -231,7 +231,8 @@ void printMatrixCSR(int rows, int cols,
 
 void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
                       const std::vector<double>& values, const std::vector<double>& b,
-                      const int max_iter, const double tol, bool parallel) {
+                      const int max_iter, const double tol,
+                      const bool parallel, const bool print_answer = false) {
 
     std::vector<double> x(b.size(), 0); // Начальное приближение
     // Старт замера
@@ -245,8 +246,10 @@ void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& c
             std::chrono::duration<double> elapsed_seconds = end - start;
             std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
             std::cout << "Solution found: ";
-            for (double val : x) {
-                std::cout << val << " ";
+            if (print_answer){
+                for (double val : x) {
+                    std::cout << val << " ";
+                }
             }
             std::cout << std::endl;
         } else {
@@ -260,8 +263,10 @@ void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& c
             std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
             // Вывод решения
             std::cout << "Solution found: ";
-            for (double val : x) {
-                std::cout << val << " ";
+            if (print_answer){
+                for (double val : x) {
+                    std::cout << val << " ";
+                }
             }
             std::cout << std::endl;
         } else {
@@ -348,7 +353,7 @@ void test2() {
     int max_iter = 1000;
     double tol = 1e-6;
 
-    test_with_params(row_ptr, col_indices, values, b, max_iter, tol, true);
+    test_with_params(row_ptr, col_indices, values, b, max_iter, tol, true, true);
 }
 
 void test2_1() {
@@ -366,20 +371,28 @@ void test2_1() {
     int max_iter = 1000;
     double tol = 1e-6;
 
-    test_with_params(row_ptr, col_indices, values, b, max_iter, tol, false);
+    test_with_params(row_ptr, col_indices, values, b, max_iter, tol, false, true);
 }
 
 void test3() {
     std::cout << "Test 3 begin:" << std::endl;
-    test_with_generate_matrix(20, 5, 10000, 1e-6, true);
-    test_with_generate_matrix(20, 5, 10000, 1e-6, false);
+    test_with_generate_matrix(6000, 6000, 1000, 1e-6, true);
+}
+void test3_not_parallel() {
+    std::cout << "Test 3 Not Parallel begin:" << std::endl;
+    test_with_generate_matrix(6000, 6000, 1000, 1e-6, false);
 }
 
 int main() {
+    std::cout << "1 Thread:" << "\n\n";
+    test3_not_parallel();
+    omp_set_num_threads(2);
+    std::cout << "\n\n" << "2 Threads:" << "\n\n";
+    test3();
     omp_set_num_threads(4);
-    test1();
-    test1_1();
-    test2();
-    test2_1();
+    std::cout << "\n\n" << "4 Threads:" << "\n\n";
+    test3();
+    omp_set_num_threads(8);
+    std::cout << "\n\n" << "8 Threads:" << "\n\n";
     test3();
 }
