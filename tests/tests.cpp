@@ -115,7 +115,8 @@ void test_with_generate_matrix(int n, int m, const int max_iter, const double to
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, parallel);
 }
 
-void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100, int max_iter = 1000) {
+void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100,
+                int max_iter = 30, bool needPrint = false) {
     //printEigenSparseMatrix(A);
     VectorXd x(m), b(n);
     b.setOnes();
@@ -129,9 +130,15 @@ void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100, int max_iter =
     x = solver.solve(b);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout << "Time: " << elapsed_seconds.count() << " sec" << std::endl;
+    std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
     std::cout << "#iterations:     " << solver.iterations() << std::endl;
     std::cout << "estimated error: " << solver.error()      << std::endl;
+    if (needPrint) {
+        for (auto& i: x) {
+            std::cout << i << " ";
+        }
+        std::cout << std::endl;
+    }
 }
 
 void test1() {
@@ -146,11 +153,13 @@ void test1() {
     std::vector<double> b = {15, 10, 10};            // Вектор b
 
     // BiCGSTAB параметры
-    int max_iter = 1000;
+    int max_iter = 30;
     double tol = 1e-6;
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, true, true);
-    std::cout << std::endl;
+
+    std::cout << std::endl << "Eigen test:" << std::endl;
+
     auto A = convertCSRToEigen(3, 3, row_ptr, col_indices, values);
     VectorXd xe(3);
     VectorXd be(3);
@@ -188,7 +197,7 @@ void test1_1() {
     std::vector<double> b = {15, 10, 10};            // Вектор b
 
     // BiCGSTAB параметры
-    int max_iter = 1000;
+    int max_iter = 30;
     double tol = 1e-6;
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, false, true);
@@ -207,11 +216,13 @@ void test2() {
     std::vector<double> b = {4, 11, 11};                            // Вектор b
 
     // BiCGSTAB параметры
-    int max_iter = 1000;
+    int max_iter = 30;
     double tol = 1e-6;
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, true, true);
-    std::cout << std::endl;
+
+    std::cout << std::endl << "Eigen test:" << std::endl;
+
     auto A = convertCSRToEigen(3, 3, row_ptr, col_indices, values);
     VectorXd xe(3);
     VectorXd be(3);
@@ -249,7 +260,7 @@ void test2_1() {
     std::vector<double> b = {4, 11, 11};                            // Вектор b
 
     // BiCGSTAB параметры
-    int max_iter = 1000;
+    int max_iter = 30;
     double tol = 1e-6;
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, false, true);
@@ -258,21 +269,21 @@ void test2_1() {
 
 void test3(const std::vector<int> row_ptr, const std::vector<int> col_indices,
            const std::vector<double> values, const std::vector<double> b,
-           int n = 6000, int m = 6000, int max_iter = 1000) {
+           int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
     std::cout << "Test 3 begin:" << std::endl;
-    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, true);
+    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, true, needPrint);
 }
 void test3_not_parallel(const std::vector<int> row_ptr, const std::vector<int> col_indices,
                         const std::vector<double> values, const std::vector<double> b,
-                        int n = 6000, int m = 6000, int max_iter = 1000) {
+                        int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
     std::cout << "Test 3 Not Parallel begin:" << std::endl;
-    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, false);
+    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, false, needPrint);
 }
 
 int main() {
-    int n = 100;
+    int n = 300;
     int m = n;
-    int max_iter = 30;
+    int max_iter = 40;
     // Тесты на корректность
     test1();
     test1_1();

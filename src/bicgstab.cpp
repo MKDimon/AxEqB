@@ -62,7 +62,7 @@ double bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>
 
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = parallelDotProduct(r_hat, r);
-        if (fabs(rho_new) < 1e-15) { // Защита от деления на 0
+        if (fabs(rho_old) < 1e-15) { // Защита от деления на 0
             std::cout << "Iter: " << iter << std::endl;
             return last_err;
         }
@@ -88,8 +88,6 @@ double bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>
         for (int i = 0; i < n; ++i) {
             s[i] = r[i] - alpha * v[i];
         }
-
-        double s_norm = sqrt(parallelDotProduct(s, s));
 
         // Вычисление t = A * s
         sparseMatrixVectorParallelMultiplyCSR(row_ptr, col_indices, values, s, t);
@@ -163,7 +161,7 @@ double bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_ind
 
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = dotProduct(r_hat, r);
-        if (fabs(rho_new) < 1e-15) { // Защита от деления на 0
+        if (fabs(rho_old) < 1e-15) { // Защита от деления на 0
             std::cout << "Iter: " << iter << std::endl;
             return last_err;
         }
@@ -185,15 +183,6 @@ double bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_ind
 
         for (int i = 0; i < n; ++i) {
             s[i] = r[i] - alpha * v[i];
-        }
-
-        double s_norm = sqrt(dotProduct(s, s));
-        if (s_norm / b_norm < tol) {
-            for (int i = 0; i < n; ++i) {
-                x[i] += alpha * p[i];
-            }
-            std::cout << "Iter: " << iter << std::endl;
-            return s_norm / b_norm;
         }
 
         // Вычисление t = A * s
