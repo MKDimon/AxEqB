@@ -5,20 +5,58 @@ project(AxEqB LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(AxEqB main.cpp)
+# add_executable(AxEqB main.cpp
+#     bicgstab.h bicgstab.cpp)
 
 include(GNUInstallDirs)
+include(CTest)
 
-OPTION (USE_OpenMP "Use OpenMP" ON)
-IF(USE_OpenMP)
-  FIND_PACKAGE(OpenMP)
-  IF(OPENMP_FOUND)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  ENDIF()
-ENDIF()
+# Указываем директории
+set(PROJECT_SOURCE_DIR "src")
+set(PROJECT_INCLUDE_DIR "include")
 
-install(TARGETS AxEqB
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+# Заголовочные файлы
+set(
+    HEADERS
+    ${PROJECT_INCLUDE_DIR}/bicgstab.h
 )
+
+# Исходные файлы
+set(
+    SOURCE
+    ${PROJECT_SOURCE_DIR}/bicgstab.cpp
+)
+
+# Добавляем библиотеку
+add_library(
+    ${PROJECT_NAME}
+    STATIC
+    ${HEADERS}
+    ${SOURCE}
+)
+
+# Добавляем директорию для возможности подключения
+target_include_directories(${PROJECT_NAME} PUBLIC  include/)
+
+# Добавляем поддержку библиотеки OpenMP
+find_package(OpenMP REQUIRED)
+if(NOT OpenMP_CXX_FOUND)
+        message(SEND_ERROR "Failed to find OpenMP.")
+        return()
+else()
+        include_directories(${OpenMP_INCLUDE_DIRS})
+    message("OpenMP FOUND dir is ${OpenMP_INCLUDE_DIRS}.")
+endif()
+# Дополнительный флаг, необходим для функционирования библиотеки
+set(CMAKE_CXX_FLAGS "-fopenmp")
+
+# Указание подключаемых библиотек
+target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
+
+# Подключение самих тестов
+if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    add_subdirectory(tests)
+endif ()
+
+
+enable_testing()
