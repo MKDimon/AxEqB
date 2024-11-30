@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <omp.h>
 #include <chrono>
@@ -12,12 +13,17 @@
 using Eigen::VectorXd;
 using Eigen::SparseMatrix;
 
+
+struct TestResult {
+    double time;
+    double error;
+};
+
 // Вывод матрицы в виде полной таблицы
 void printMatrixCSR(int rows, int cols,
                     const std::vector<int>& row_ptr,
                     const std::vector<int>& col_indices,
                     const std::vector<double>& values) {
-    // Для каждой строки
     for (int i = 0; i < rows; ++i) {
         int start = row_ptr[i];
         int end = row_ptr[i + 1];
@@ -33,11 +39,11 @@ void printMatrixCSR(int rows, int cols,
                 std::cout << std::setw(6) << 0.0 << " ";
             }
         }
-        std::cout << std::endl; // Переход на новую строку
+        std::cout << std::endl;
     }
 }
 
-void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
+TestResult test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
                       const std::vector<double>& values, const std::vector<double>& b,
                       const int max_iter, const double tol,
                       const bool parallel, const bool print_answer = false) {
@@ -46,10 +52,8 @@ void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& c
     BiCGSTAB::BiCGSTAB worker(parallel);
     std::cout << (parallel ? "Parallel calc:" : "Not parallel calc") << std::endl;
 
-    // Старт замера
     auto start = std::chrono::high_resolution_clock::now();
     auto err = worker.run(row_ptr, col_indices, values, b, x, max_iter, tol);
-    // Конец замера
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
     std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
@@ -61,6 +65,10 @@ void test_with_params(const std::vector<int>& row_ptr, const std::vector<int>& c
         }
     }
     std::cout << std::endl;
+    return {
+        elapsed_seconds.count(),
+        err
+    };
 }
 
 // Функция для генерации разреженной ленточной матрицы в формате CSR
@@ -91,14 +99,12 @@ Eigen::SparseMatrix<double> convertCSRToEigen(
     // Создаём список триплетов для заполнения
     std::vector<Eigen::Triplet<double>> triplets;
 
-    // Перебираем строки
     for (int i = 0; i < rows; ++i) {
         for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
             triplets.emplace_back(i, col_indices[j], values[j]);
         }
     }
 
-    // Создаём разреженную матрицу
     Eigen::SparseMatrix<double> mat(rows, cols);
     mat.setFromTriplets(triplets.begin(), triplets.end());
 
@@ -106,18 +112,22 @@ Eigen::SparseMatrix<double> convertCSRToEigen(
 }
 
 void test_with_generate_matrix(int n, int m, const int max_iter, const double tol, const bool parallel) {
-    std::vector<int> row_ptr;           // Указатели строк
-    std::vector<int> col_indices;       // Индексы столбцов
-    std::vector<double> values;         // Значения
-    std::vector<double> b(n, 1);        // Вектор b
+    std::vector<int> row_ptr;
+    std::vector<int> col_indices;
+    std::vector<double> values;
+    std::vector<double> b(n, 1);
 
     generateSparseMatrixCSR(n, m, row_ptr, col_indices, values);
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, parallel);
 }
 
-void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100,
-                int max_iter = 30, bool needPrint = false) {
+TestResult test_eigen(const std::vector<int> row_ptr, const std::vector<int> col_indices,
+
+    const std::vector<double> values, const std::vector<double> b_placeholder,
+    int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
+    const auto A = convertCSRToEigen(n, m, row_ptr, col_indices, values);
+
     VectorXd x(m), b(n);
     b.setOnes();
 
@@ -132,13 +142,17 @@ void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100,
     std::chrono::duration<double> elapsed_seconds = end - start;
     std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
     std::cout << "#iterations:     " << solver.iterations() << std::endl;
-    std::cout << "estimated error: " << solver.error()      << std::endl;
+    std::cout << "estimated error: " << solver.error() << std::endl;
     if (needPrint) {
-        for (auto& i: x) {
+        for (auto& i : x) {
             std::cout << i << " ";
         }
         std::cout << std::endl;
     }
+    return {
+        elapsed_seconds.count(),
+        solver.error()
+    };
 }
 
 void test1() {
@@ -191,10 +205,10 @@ void test1_1() {
     std::cout << "( -1 0 4 ) x (  -10   ) = ( 10 )" << std::endl;
     std::cout << "( 0 -1 0 )   ( 2.8125 )   ( 10 )" << std::endl;
     // Пример матрицы в формате CSR
-    std::vector<int> row_ptr = {0, 2, 4, 5};         // Указатели строк
-    std::vector<int> col_indices = {0, 1, 0, 2, 1};  // Индексы столбцов
-    std::vector<double> values = {4, -1, -1, 4, -1}; // Значения
-    std::vector<double> b = {15, 10, 10};            // Вектор b
+    std::vector<int> row_ptr = {0, 2, 4, 5};
+    std::vector<int> col_indices = {0, 1, 0, 2, 1};
+    std::vector<double> values = {4, -1, -1, 4, -1};
+    std::vector<double> b = {15, 10, 10};
 
     // BiCGSTAB параметры
     int max_iter = 30;
@@ -210,10 +224,10 @@ void test2() {
     std::cout << "( 3  4 -2 ) x ( 1 ) = ( 11 )" << std::endl;
     std::cout << "( 3 -2  4 )   ( 1 )   ( 11 )" << std::endl;
     // Пример матрицы в формате CSR
-    std::vector<int> row_ptr = {0, 3, 6, 9};                        // Указатели строк
-    std::vector<int> col_indices = {0, 1, 2, 0, 1, 2, 0, 1, 2};     // Индексы столбцов
-    std::vector<double> values = {2, -1, -1, 3, 4, -2, 3, -2, 4};   // Значения
-    std::vector<double> b = {4, 11, 11};                            // Вектор b
+    std::vector<int> row_ptr = {0, 3, 6, 9};
+    std::vector<int> col_indices = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+    std::vector<double> values = {2, -1, -1, 3, 4, -2, 3, -2, 4};
+    std::vector<double> b = {4, 11, 11};
 
     // BiCGSTAB параметры
     int max_iter = 30;
@@ -254,10 +268,10 @@ void test2_1() {
     std::cout << "( 3  4 -2 ) x ( 1 ) = ( 11 )" << std::endl;
     std::cout << "( 3 -2  4 )   ( 1 )   ( 11 )" << std::endl;
     // Пример матрицы в формате CSR
-    std::vector<int> row_ptr = {0, 3, 6, 9};                        // Указатели строк
-    std::vector<int> col_indices = {0, 1, 2, 0, 1, 2, 0, 1, 2};     // Индексы столбцов
-    std::vector<double> values = {2, -1, -1, 3, 4, -2, 3, -2, 4};   // Значения
-    std::vector<double> b = {4, 11, 11};                            // Вектор b
+    std::vector<int> row_ptr = {0, 3, 6, 9};
+    std::vector<int> col_indices = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+    std::vector<double> values = {2, -1, -1, 3, 4, -2, 3, -2, 4};
+    std::vector<double> b = {4, 11, 11};
 
     // BiCGSTAB параметры
     int max_iter = 30;
@@ -267,48 +281,90 @@ void test2_1() {
     std::cout << std::endl;
 }
 
-void test3(const std::vector<int> row_ptr, const std::vector<int> col_indices,
+TestResult test3(const std::vector<int> row_ptr, const std::vector<int> col_indices,
            const std::vector<double> values, const std::vector<double> b,
            int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
     std::cout << "Test 3 begin:" << std::endl;
-    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, true, needPrint);
+    return test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, true, needPrint);
 }
-void test3_not_parallel(const std::vector<int> row_ptr, const std::vector<int> col_indices,
+TestResult test3_not_parallel(const std::vector<int> row_ptr, const std::vector<int> col_indices,
                         const std::vector<double> values, const std::vector<double> b,
                         int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
     std::cout << "Test 3 Not Parallel begin:" << std::endl;
-    test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, false, needPrint);
+    return test_with_params(row_ptr, col_indices, values, b, max_iter, 1e-6, false, needPrint);
 }
 
+void create_csv(const std::string& file_path, const std::vector<std::vector<double>>& rows) {
+    std::ofstream file(file_path);
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file for writing." << std::endl;
+        return;
+    }
+
+    file << "eigen;1;2;4;n\n";
+    for (const auto& row : rows) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            file << row[i];
+            if (i < row.size() - 1) {
+                file << ";";
+            }
+        }
+        file << "\n";
+    }
+    file.close();
+
+    if (file.good()) {
+        std::cout << "CSV file created successfully at: " << file_path << std::endl;
+    }
+    else {
+        std::cerr << "Error: Writing to file failed." << std::endl;
+    }
+}
+
+
 int main() {
+    const std::string file_path = "test_results.csv";
     // Тесты на корректность
     test1();
     test1_1();
     test2();
     test2_1();
 
+    std::vector<std::vector<double>> data = {};
+
+    const int max_iter = 40;
+    const int tries_amount = 3;
     // Тесты на ускорение за счет многотопочности
     // для больших размерностей
-    int n = 300;
-    int m = n;
-    int max_iter = 40;
+    for (int n = 300; n <= 600; n += 100) {
+        int m = n;
 
-    std::vector<int> row_ptr;           // Указатели строк
-    std::vector<int> col_indices;       // Индексы столбцов
-    std::vector<double> values;         // Значения
-    std::vector<double> b(n, 1);        // Вектор b
+        for (int i = 0; i < tries_amount; i++) {
+            std::vector<int> row_ptr;
+            std::vector<int> col_indices;
+            std::vector<double> values;
+            std::vector<double> b(n, 1);
 
-    generateSparseMatrixCSR(n, m, row_ptr, col_indices, values);
+            generateSparseMatrixCSR(n, m, row_ptr, col_indices, values);
+    
+            std::cout << "\n\n" << "1 Thread:" << "\n\n";
+            const auto non_parallel_result = test3_not_parallel(row_ptr, col_indices, values, b, n, m, max_iter);
+            omp_set_num_threads(2);
+            std::cout << "\n\n" << "2 Threads:" << "\n\n";
+            const auto two_threads_result = test3(row_ptr, col_indices, values, b, n, m, max_iter);
+            omp_set_num_threads(4);
+            std::cout << "\n\n" << "4 Threads:" << "\n\n";
+            const auto four_threads_result = test3(row_ptr, col_indices, values, b, n, m, max_iter);
 
-    std::cout << "\n\n" << "1 Thread:" << "\n\n";
-    test3_not_parallel(row_ptr, col_indices, values, b, n, m, max_iter);
-    omp_set_num_threads(2);
-    std::cout << "\n\n" << "2 Threads:" << "\n\n";
-    test3(row_ptr, col_indices, values, b, n, m, max_iter);
-    omp_set_num_threads(4);
-    std::cout << "\n\n" << "4 Threads:" << "\n\n";
-    test3(row_ptr, col_indices, values, b, n, m, max_iter);
+            omp_set_num_threads(4);
+            std::cout << "\n\n" << "Eigen test:" << "\n\n";
+            const auto eigen_result = test_eigen(row_ptr, col_indices, values, b, n, m, max_iter);
 
-    std::cout << "\n\n" << "Eigen test:" << "\n\n";
-    test_eigen(convertCSRToEigen(n, m, row_ptr, col_indices, values), n, m, max_iter);
+            data.push_back({ eigen_result.time, non_parallel_result.time, two_threads_result.time, four_threads_result.time, (double)n });
+        }
+    }
+
+    create_csv(file_path, data);
+    std::cout << "Tests result csv file generated!" << std::endl;
 }
