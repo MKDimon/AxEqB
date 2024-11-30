@@ -48,23 +48,32 @@ TestResult test_with_params(const std::vector<int>& row_ptr, const std::vector<i
                       const int max_iter, const double tol,
                       const bool parallel, const bool print_answer = false) {
 
-    std::vector<double> x(b.size(), 0); // Начальное приближение
+    std::vector<double> *x = new std::vector<double> (b.size(), 0); // Начальное приближение
+    auto *_row_ptr = new std::vector<int>(row_ptr);
+    auto *_col_indices = new std::vector<int>(col_indices);
+    auto *_values = new std::vector<double>(values);
+    auto *_b = new std::vector<double>(b);
+
     BiCGSTAB::BiCGSTAB worker(parallel);
     std::cout << (parallel ? "Parallel calc:" : "Not parallel calc") << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
-    auto err = worker.run(row_ptr, col_indices, values, b, x, max_iter, tol);
+    auto err = worker.run(*_row_ptr, *_col_indices, *_values, *_b, *x, max_iter, tol);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
     std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
     std::cout << "Error: " << err << std::endl;
     if (print_answer){
         std::cout << "Solution found: ";
-        for (double val : x) {
+        for (double val : *x) {
             std::cout << val << " ";
         }
     }
     std::cout << std::endl;
+    delete _row_ptr;
+    delete _col_indices;
+    delete _values;
+    delete _b;
     return {
         elapsed_seconds.count(),
         err
@@ -90,25 +99,24 @@ void generateSparseMatrixCSR(int n, int m,
 }
 
 // Конвертация CSR в Eigen::SparseMatrix
-Eigen::SparseMatrix<double> convertCSRToEigen(
+void convertCSRToEigen(
     int rows, int cols,
     const std::vector<int>& row_ptr,
     const std::vector<int>& col_indices,
-    const std::vector<double>& values) {
+    const std::vector<double>& values,
+    Eigen::SparseMatrix<double>* mat) {
 
     // Создаём список триплетов для заполнения
-    std::vector<Eigen::Triplet<double>> triplets;
+    std::vector<Eigen::Triplet<double>> *triplets = new std::vector<Eigen::Triplet<double>>();
 
     for (int i = 0; i < rows; ++i) {
         for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
-            triplets.emplace_back(i, col_indices[j], values[j]);
+            triplets->emplace_back(i, col_indices[j], values[j]);
         }
     }
 
-    Eigen::SparseMatrix<double> mat(rows, cols);
-    mat.setFromTriplets(triplets.begin(), triplets.end());
-
-    return mat;
+    mat->setFromTriplets(triplets->begin(), triplets->end());
+    delete triplets;
 }
 
 void test_with_generate_matrix(int n, int m, const int max_iter, const double tol, const bool parallel) {
@@ -123,18 +131,17 @@ void test_with_generate_matrix(int n, int m, const int max_iter, const double to
 }
 
 TestResult test_eigen(const std::vector<int> row_ptr, const std::vector<int> col_indices,
-
     const std::vector<double> values, const std::vector<double> b_placeholder,
     int n = 300, int m = 300, int max_iter = 30, bool needPrint = false) {
-    const auto A = convertCSRToEigen(n, m, row_ptr, col_indices, values);
-
+    auto *A = new Eigen::SparseMatrix<double>(n, m);
+    convertCSRToEigen(n, m, row_ptr, col_indices, values, A);
     VectorXd x(m), b(n);
     b.setOnes();
 
     Eigen::BiCGSTAB<SparseMatrix<double> > solver;
     solver.setMaxIterations(max_iter);
     solver.setTolerance(1e-6);
-    solver.compute(A);
+    solver.compute(*A);
 
     auto start = std::chrono::high_resolution_clock::now();
     x = solver.solve(b);
@@ -149,6 +156,7 @@ TestResult test_eigen(const std::vector<int> row_ptr, const std::vector<int> col
         }
         std::cout << std::endl;
     }
+    delete A;
     return {
         elapsed_seconds.count(),
         solver.error()
@@ -174,7 +182,8 @@ void test1() {
 
     std::cout << std::endl << "Eigen test:" << std::endl;
 
-    auto A = convertCSRToEigen(3, 3, row_ptr, col_indices, values);
+    auto *A = new Eigen::SparseMatrix<double>(3, 3);;
+    convertCSRToEigen(3, 3, row_ptr, col_indices, values, A);
     VectorXd xe(3);
     VectorXd be(3);
     be[0] = 15;
@@ -184,7 +193,7 @@ void test1() {
     Eigen::BiCGSTAB<SparseMatrix<double> > solver;
     solver.setMaxIterations(max_iter);
     solver.setTolerance(1e-6);
-    solver.compute(A);
+    solver.compute(*A);
 
     auto start = std::chrono::high_resolution_clock::now();
     xe = solver.solve(be);
@@ -237,7 +246,8 @@ void test2() {
 
     std::cout << std::endl << "Eigen test:" << std::endl;
 
-    auto A = convertCSRToEigen(3, 3, row_ptr, col_indices, values);
+    auto *A = new Eigen::SparseMatrix<double>(3, 3);;
+    convertCSRToEigen(3, 3, row_ptr, col_indices, values, A);
     VectorXd xe(3);
     VectorXd be(3);
     be[0] = 4;
@@ -247,7 +257,7 @@ void test2() {
     Eigen::BiCGSTAB<SparseMatrix<double> > solver;
     solver.setMaxIterations(max_iter);
     solver.setTolerance(1e-6);
-    solver.compute(A);
+    solver.compute(*A);
 
     auto start = std::chrono::high_resolution_clock::now();
     xe = solver.solve(be);
@@ -333,9 +343,9 @@ int main() {
 
     std::vector<std::vector<double>> data = {};
 
-    const int start_dimension = 200;
-    const int end_dimension = 600;
-    const int step_dimension = 100;
+    const int start_dimension = 1000;
+    const int end_dimension = 10000;
+    const int step_dimension = 1000;
     const int max_iter = 40;
     const int tries_amount = 3;
     // Тесты на ускорение за счет многотопочности
@@ -345,28 +355,38 @@ int main() {
         int m = n;
 
         for (int i = 0; i < tries_amount; i++) {
-            std::vector<int> row_ptr;
-            std::vector<int> col_indices;
-            std::vector<double> values;
-            std::vector<double> b(n, 1);
+            std::vector<int> *row_ptr = new std::vector<int>();
+            std::vector<int> *col_indices = new std::vector<int>();
+            std::vector<double> *values = new std::vector<double>();
+            std::vector<double> *b = new std::vector<double>(n, 1);
 
-            generateSparseMatrixCSR(n, m, row_ptr, col_indices, values);
+            generateSparseMatrixCSR(n, m, *row_ptr, *col_indices, *values);
     
             std::cout << "\n\n" << "1 Thread:" << "\n\n";
-            const auto non_parallel_result = test3_not_parallel(row_ptr, col_indices, values, b, n, m, max_iter);
+            const auto non_parallel_result = test3_not_parallel(*row_ptr, *col_indices, *values, *b, n, m, max_iter);
             omp_set_num_threads(2);
             std::cout << "\n\n" << "2 Threads:" << "\n\n";
-            const auto two_threads_result = test3(row_ptr, col_indices, values, b, n, m, max_iter);
+            const auto two_threads_result = test3(*row_ptr, *col_indices, *values, *b, n, m, max_iter);
             omp_set_num_threads(4);
             std::cout << "\n\n" << "4 Threads:" << "\n\n";
-            const auto four_threads_result = test3(row_ptr, col_indices, values, b, n, m, max_iter);
+            const auto four_threads_result = test3(*row_ptr, *col_indices, *values, *b, n, m, max_iter);
 
             omp_set_num_threads(4);
             Eigen::setNbThreads(4);
             std::cout << "\n\n" << "Eigen test:" << "\n\n";
-            const auto eigen_result = test_eigen(row_ptr, col_indices, values, b, n, m, max_iter);
+            const auto eigen_result = test_eigen(*row_ptr, *col_indices, *values, *b, n, m, max_iter);
 
-            data.push_back({ eigen_result.time, non_parallel_result.time, two_threads_result.time, four_threads_result.time, (double)n });
+            data.push_back({eigen_result.time           / max_iter,
+                            non_parallel_result.time    / max_iter,
+                            two_threads_result.time     / max_iter,
+                            four_threads_result.time    / max_iter,
+                            (double)n
+            });
+
+            delete row_ptr;
+            delete col_indices;
+            delete values;
+            delete b;
         }
     }
 
