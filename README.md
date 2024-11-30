@@ -137,7 +137,8 @@
 
 Эти файлы вместе обеспечивают полный цикл: от реализации метода BiCGSTAB до тестирования его производительности и корректности.
 
-![image](https://github.com/user-attachments/assets/26546345-f757-42d2-a830-db1c5f209560)
+![image](https://github.com/user-attachments/assets/3b73b7a0-d115-4959-ae73-7fb4699006dd)
+
 
 
 
