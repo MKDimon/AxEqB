@@ -63,6 +63,7 @@ double bicgstab_parallel(const std::vector<int>& row_ptr, const std::vector<int>
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = parallelDotProduct(r_hat, r);
         if (fabs(rho_old) < 1e-15) { // Защита от деления на 0
+            std::cout << "Zero case." << std::endl;
             std::cout << "Iter: " << iter << std::endl;
             return last_err;
         }

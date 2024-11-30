@@ -71,9 +71,11 @@ void generateSparseMatrixCSR(int n, int m,
     static const int MAX_VALUE = 10;
     row_ptr.resize(n + 1, 0);
     for (int i = 0; i < n; ++i) {
-        for (int j = std::max(0, i - m); j <= std::min(n - 1, i + m); ++j) {
-            values.push_back(std::rand() % 10); // Заполняем значением 1.0
-            col_indices.push_back(j);
+        for (int j = 0; j < m; ++j) {
+            if (!(std::rand() % 5)) {
+                values.push_back((std::rand() % 10) + 1);
+                col_indices.push_back(j);
+            }
         }
         row_ptr[i + 1] = values.size();
     }
