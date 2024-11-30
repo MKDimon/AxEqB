@@ -10,7 +10,7 @@ BiCGSTAB::BiCGSTAB(const bool usingParallel)
     : usingParallel(usingParallel)
 {}
 
-// Умножение матрицы CSR на вектор
+// Параллельное умножение матрицы CSR на вектор
 void sparseMatrixVectorParallelMultiplyCSR(const std::vector<int>& row_ptr,
                                            const std::vector<int>& col_indices,
                                            const std::vector<double>& values,
@@ -131,7 +131,7 @@ void sparseMatrixVectorMultiplyCSR(const std::vector<int>& row_ptr,
     }
 }
 
-// Параллельное скалярное произведение
+// Непараллельное скалярное произведение
 double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2) {
     double result = 0.0;
     for (int i = 0; i < v1.size(); ++i) {
@@ -140,7 +140,7 @@ double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2) 
     return result;
 }
 
-// BiCGSTAB с параллельной итерацией
+// BiCGSTAB без распараллеливания
 double bicgstab(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
               const std::vector<double>& values, const std::vector<double>& b,
               std::vector<double>& x, int max_iter, double tol) {

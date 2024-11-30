@@ -73,7 +73,7 @@ void generateSparseMatrixCSR(int n, int m,
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
             if (!(std::rand() % 5)) {
-                values.push_back((std::rand() % 10) + 1);
+                values.push_back((std::rand() % MAX_VALUE) + 1);
                 col_indices.push_back(j);
             }
         }
@@ -112,14 +112,12 @@ void test_with_generate_matrix(int n, int m, const int max_iter, const double to
     std::vector<double> b(n, 1);        // Вектор b
 
     generateSparseMatrixCSR(n, m, row_ptr, col_indices, values);
-    //printMatrixCSR(n, m, row_ptr, col_indices, values);
 
     test_with_params(row_ptr, col_indices, values, b, max_iter, tol, parallel);
 }
 
 void test_eigen(SparseMatrix<double> A, int n = 100, int m = 100,
                 int max_iter = 30, bool needPrint = false) {
-    //printEigenSparseMatrix(A);
     VectorXd x(m), b(n);
     b.setOnes();
 
@@ -149,10 +147,10 @@ void test1() {
     std::cout << "( -1 0 4 ) x (  -10   ) = ( 10 )" << std::endl;
     std::cout << "( 0 -1 0 )   ( 2.8125 )   ( 10 )" << std::endl;
     // Пример матрицы в формате CSR
-    std::vector<int> row_ptr = {0, 2, 4, 5}; // Указатели строк
-    std::vector<int> col_indices = {0, 1, 0, 2, 1}; // Индексы столбцов
-    std::vector<double> values = {4, -1, -1, 4, -1}; // Значения
-    std::vector<double> b = {15, 10, 10};            // Вектор b
+    std::vector<int> row_ptr = {0, 2, 4, 5};            // Указатели строк
+    std::vector<int> col_indices = {0, 1, 0, 2, 1};     // Индексы столбцов
+    std::vector<double> values = {4, -1, -1, 4, -1};    // Значения
+    std::vector<double> b = {15, 10, 10};               // Вектор b
 
     // BiCGSTAB параметры
     int max_iter = 30;
@@ -283,16 +281,17 @@ void test3_not_parallel(const std::vector<int> row_ptr, const std::vector<int> c
 }
 
 int main() {
-    int n = 300;
-    int m = n;
-    int max_iter = 40;
     // Тесты на корректность
     test1();
     test1_1();
     test2();
     test2_1();
+
     // Тесты на ускорение за счет многотопочности
     // для больших размерностей
+    int n = 300;
+    int m = n;
+    int max_iter = 40;
 
     std::vector<int> row_ptr;           // Указатели строк
     std::vector<int> col_indices;       // Индексы столбцов
