@@ -366,5 +366,5 @@ int main() {
     }
 
     create_csv(file_path, data);
-    std::cout << "Tests result csv file generated!" << std::endl;
+    std::cout << "Tests result file generated!" << std::endl;
 }
