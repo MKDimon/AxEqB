@@ -340,6 +340,7 @@ int main() {
     const int tries_amount = 3;
     // Тесты на ускорение за счет многотопочности
     // для больших размерностей
+    Eigen::initParallel();
     for (int n = start_dimension; n <= end_dimension; n += step_dimension) {
         int m = n;
 
@@ -361,6 +362,7 @@ int main() {
             const auto four_threads_result = test3(row_ptr, col_indices, values, b, n, m, max_iter);
 
             omp_set_num_threads(4);
+            Eigen::setNbThreads(4);
             std::cout << "\n\n" << "Eigen test:" << "\n\n";
             const auto eigen_result = test_eigen(row_ptr, col_indices, values, b, n, m, max_iter);
 
