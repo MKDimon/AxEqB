@@ -333,11 +333,14 @@ int main() {
 
     std::vector<std::vector<double>> data = {};
 
+    const int start_dimension = 200;
+    const int end_dimension = 600;
+    const int step_dimension = 100;
     const int max_iter = 40;
     const int tries_amount = 3;
     // Тесты на ускорение за счет многотопочности
     // для больших размерностей
-    for (int n = 300; n <= 600; n += 100) {
+    for (int n = start_dimension; n <= end_dimension; n += step_dimension) {
         int m = n;
 
         for (int i = 0; i < tries_amount; i++) {
