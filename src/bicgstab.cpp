@@ -32,7 +32,9 @@ void sparse_matrix_vector_parallel_multiply_CSR(const std::vector<int>& row_ptr,
 // Параллельное скалярное произведение
 double parallel_dot_product(const std::vector<double>& v1, const std::vector<double>& v2) {
     double result = 0.0;
-#pragma omp parallel for reduction(+:result)
+    // Как показала практика никак не влияет на скорость работы
+    // но оставим тут для того чтобы не было недопониманий
+//#pragma omp parallel for reduction(+:result)
     for (int i = 0; i < v1.size(); ++i) {
         result += v1[i] * v2[i];
     }
@@ -173,6 +175,7 @@ double BiCGSTAB::bicgstab(const std::vector<int>& row_ptr, const std::vector<int
     for (int iter = 0; iter < max_iter; ++iter) {
         rho_new = dot_product(r_hat, r);
         if (fabs(rho_old) < 1e-15) { // Защита от деления на 0
+            std::cout << "Zero case." << std::endl;
             std::cout << "Iter: " << iter << std::endl;
             this->update_return_params(this->last_error, iter);
             return this->last_error;

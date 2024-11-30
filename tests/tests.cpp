@@ -62,7 +62,7 @@ TestResult test_with_params(const std::vector<int>& row_ptr, const std::vector<i
     auto err = worker.run(*_row_ptr, *_col_indices, *_values, *_b, *x, max_iter, tol);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
+    std::cout << "Time running: " << elapsed_seconds.count() / worker.iterations() << " sec" << std::endl;
     std::cout << "Error: " << err << std::endl;
     if (print_answer){
         std::cout << "Solution found: ";
@@ -149,7 +149,7 @@ TestResult test_eigen(const std::vector<int> row_ptr, const std::vector<int> col
     x = solver.solve(b);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout << "Time running: " << elapsed_seconds.count() << " sec" << std::endl;
+    std::cout << "Time running: " << elapsed_seconds.count() / solver.iterations() << " sec" << std::endl;
     std::cout << "#iterations:     " << solver.iterations() << std::endl;
     std::cout << "estimated error: " << solver.error() << std::endl;
     if (needPrint) {
@@ -349,7 +349,7 @@ int main() {
     const int start_dimension = 1000;
     const int end_dimension = 10000;
     const int step_dimension = 1000;
-    const int max_iter = 40;
+    const int max_iter = 200;
     const int tries_amount = 3;
     // Тесты на ускорение за счет многотопочности
     // для больших размерностей
