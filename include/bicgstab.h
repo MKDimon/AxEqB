@@ -12,7 +12,7 @@ public:
     double run(const std::vector<int>& row_ptr, const std::vector<int>& col_indices,
              const std::vector<double>& values, const std::vector<double>& b,
              std::vector<double>& x, int max_iter, double tol);
-
+    int iterations() const;
 private:
     double last_error = -1;
     int last_amount_of_iterations = -1;

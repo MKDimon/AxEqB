@@ -17,6 +17,7 @@ using Eigen::SparseMatrix;
 struct TestResult {
     double time;
     double error;
+    int iter;
 };
 
 // Вывод матрицы в виде полной таблицы
@@ -76,7 +77,8 @@ TestResult test_with_params(const std::vector<int>& row_ptr, const std::vector<i
     delete _b;
     return {
         elapsed_seconds.count(),
-        err
+        err,
+        worker.iterations(),
     };
 }
 
@@ -159,7 +161,8 @@ TestResult test_eigen(const std::vector<int> row_ptr, const std::vector<int> col
     delete A;
     return {
         elapsed_seconds.count(),
-        solver.error()
+        solver.error(),
+        solver.iterations(),
     };
 }
 
@@ -376,10 +379,10 @@ int main() {
             std::cout << "\n\n" << "Eigen test:" << "\n\n";
             const auto eigen_result = test_eigen(*row_ptr, *col_indices, *values, *b, n, m, max_iter);
 
-            data.push_back({eigen_result.time           / max_iter,
-                            non_parallel_result.time    / max_iter,
-                            two_threads_result.time     / max_iter,
-                            four_threads_result.time    / max_iter,
+            data.push_back({eigen_result.time         / eigen_result.iter,
+                            non_parallel_result.time  / non_parallel_result.iter,
+                            two_threads_result.time   / two_threads_result.iter,
+                            four_threads_result.time  / four_threads_result.iter,
                             (double)n
             });
 

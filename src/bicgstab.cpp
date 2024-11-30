@@ -229,4 +229,8 @@ double BiCGSTAB::run(const std::vector<int>& row_ptr, const std::vector<int>& co
                bicgstab(row_ptr, col_indices, values, b, x, max_iter, tol);
 }
 
+int BiCGSTAB::iterations() const {
+    return last_amount_of_iterations;
+}
+
 }
